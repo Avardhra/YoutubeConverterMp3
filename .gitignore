@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# App Specific
+downloads/
+*.zip
+*.mp3
+
+# SENSITIVE DATA - JANGAN DI-PUSH KE GITHUB
+cookies.txt
