@@ -71,8 +71,8 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # Format 'bestaudio/best' memastikan jika audio murni tidak ada, 
-                # ia akan mengambil video+audio lalu diekstrak suaranya.
+                # 'bestaudio/best' adalah kunci: cari audio saja, 
+                # kalau gagal ambil format video+audio mana saja yang ada
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -80,9 +80,12 @@ def process_videos():
                     'preferredquality': '192',
                 }],
                 'extract_audio': True,
-                'ignoreerrors': True,  # Jangan berhenti jika satu URL gagal
-                'noplaylist': True,    # Fokus pada satu video saja
-                'prefer_ffmpeg': True, # Paksa penggunaan FFmpeg
+                # Parameter sakti agar tidak rewel soal format:
+                'ignoreerrors': True,
+                'prefer_ffmpeg': True,
+                'noplaylist': True,
+                # Paksa ambil format yang pasti ada (fallback)
+                'format_sort': ['res:1080', 'ext:mp4:m4a'], 
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
                 'quiet': True,
