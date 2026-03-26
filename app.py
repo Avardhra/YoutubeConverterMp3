@@ -71,8 +71,7 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # KUNCI PERBAIKAN: 'bestaudio/best' agar tidak error format
-                'format': 'bestaudio/best',
+                'format': 'bestaudio[ext=m4a]/bestaudio/best', # Ambil apa saja yang tersedia
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -81,16 +80,12 @@ def process_videos():
                 'extract_audio': True,
                 'ignoreerrors': True,
                 'noplaylist': True,
-                'prefer_ffmpeg': True,
+                'prefer_ffmpeg': True, # Paksa pakai FFmpeg Linux tadi
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
                 'quiet': True,
                 'no_warnings': True,
                 'nocheckcertificate': True,
-                'source_address': '0.0.0.0',
-                'force_ipv4': True,
-                'cachedir': False,
-                'rm_cachedir': True,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             }
 
