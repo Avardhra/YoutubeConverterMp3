@@ -18,10 +18,10 @@ except Exception as e:
     print(f"Update error: {e}")
 
 app = Flask(__name__, static_url_path='', static_folder='.', template_folder='.')
-# Izinkan CORS dari Vercel atau domain manapun
+# Izinkan CORS secara menyeluruh
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Konfigurasi Path Absolut
+# Konfigurasi Path Absolut untuk Railway
 BASE_DIR = os.getcwd()
 DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -71,19 +71,18 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # 'bestaudio/best' berarti: ambil audio terbaik, 
-                # jika tidak ada, ambil format apa saja yang paling bagus (video+audio)
+                # Format 'bestaudio/best' memastikan jika audio murni tidak ada, 
+                # ia akan mengambil video+audio lalu diekstrak suaranya.
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                # Pengaturan tambahan agar lebih kompatibel
                 'extract_audio': True,
-                'ignoreerrors': True, # Lewati jika ada satu file yang gagal agar tidak stop total
-                'noplaylist': True,   # Fokus ke satu video saja per URL
-                'prefer_ffmpeg': True,
+                'ignoreerrors': True,  # Jangan berhenti jika satu URL gagal
+                'noplaylist': True,    # Fokus pada satu video saja
+                'prefer_ffmpeg': True, # Paksa penggunaan FFmpeg
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
                 'quiet': True,
@@ -95,7 +94,7 @@ def process_videos():
                 'rm_cachedir': True,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             }
-            # Gunakan cookies jika filenya berhasil dibuat
+
             if os.path.exists(cookie_path):
                 ydl_opts['cookiefile'] = cookie_path
 
@@ -104,18 +103,20 @@ def process_videos():
                     tracker.title = f"Lagu {i+1}/{len(urls)}"
                     tracker.status = "Mengunduh..."
                     try:
+                        # Retry logic jika terjadi kendala jaringan
                         for attempt in range(3):
                             try:
                                 ydl.download([url])
                                 break
                             except Exception as e:
                                 print(f"Retry {attempt+1}: {e}")
-                                time.sleep(2)
+                                time.sleep(3)
                         tracker.current += 1
                     except Exception as e:
                         print(f"Error downloading {url}: {e}")
                         tracker.current += 1 
 
+            # Jeda sebentar agar FFmpeg selesai merapikan file
             time.sleep(3)
 
             mp3_files = [f for f in os.listdir(session_path) if f.endswith('.mp3')]
@@ -131,6 +132,7 @@ def process_videos():
             tracker.status = f"❌ Error: {str(e)}"
             tracker.is_complete = True
         finally:
+            # Hapus data otomatis setelah 10 menit
             threading.Timer(600.0, cleanup_session, args=[session_id]).start()
 
     thread = threading.Thread(target=download_worker)
@@ -209,5 +211,6 @@ def cleanup_session(session_id):
         print(f"Cleanup error: {e}")
 
 if __name__ == '__main__':
+    # Support Port dinamis Railway
     port = int(os.environ.get("PORT", 7860))
     app.run(host='0.0.0.0', port=port)
