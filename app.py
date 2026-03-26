@@ -71,17 +71,18 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                'format': 'bestaudio/best',
+                # Ubah baris ini agar lebih fleksibel
+                'format': 'bestaudio/best', 
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '128', # 128kbps lebih hemat RAM daripada 192kbps
+                    'preferredquality': '128', # Tetap 128 agar RAM Railway aman
                 }],
+                # Tambahkan ini agar tidak pilih format yang aneh
+                'keepvideo': False,
                 'nocheckcertificate': True,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'source_address': '0.0.0.0', # Penting untuk stabilitas IP di Railway/HF
-                'quiet': True,
-                'no_warnings': True,
+                'source_address': '0.0.0.0',
             }
 
             if os.path.exists(cookie_path):
