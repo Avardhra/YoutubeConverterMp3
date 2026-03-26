@@ -71,18 +71,18 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # Ubah baris ini agar lebih fleksibel
-                'format': 'bestaudio/best', 
+                'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '128', # Tetap 128 agar RAM Railway aman
+                    'preferredquality': '128',
                 }],
-                # Tambahkan ini agar tidak pilih format yang aneh
-                'keepvideo': False,
+                # Tambahan untuk mengatasi tantangan JavaScript
+                'noprogress': True,
                 'nocheckcertificate': True,
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'source_address': '0.0.0.0',
+                'quiet': True
             }
 
             if os.path.exists(cookie_path):
