@@ -71,16 +71,18 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # Mengambil audio terbaik, jika tidak ada ambil video+audio lalu ekstrak
+                # 'bestaudio/best' berarti: ambil audio terbaik, 
+                # jika tidak ada, ambil format apa saja yang paling bagus (video+audio)
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                # Pengaturan tambahan agar tidak gampang error
+                # Pengaturan tambahan agar lebih kompatibel
                 'extract_audio': True,
-                'ignoreerrors': True,  # Lewati jika ada satu video yang error dalam playlist
+                'ignoreerrors': True, # Lewati jika ada satu file yang gagal agar tidak stop total
+                'noplaylist': True,   # Fokus ke satu video saja per URL
                 'prefer_ffmpeg': True,
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
@@ -93,7 +95,6 @@ def process_videos():
                 'rm_cachedir': True,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             }
-
             # Gunakan cookies jika filenya berhasil dibuat
             if os.path.exists(cookie_path):
                 ydl_opts['cookiefile'] = cookie_path
