@@ -1,18 +1,18 @@
 FROM python:3.10-slim
 
-# Install FFmpeg versi Linux (WAJIB)
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Install FFmpeg
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /code
 
+# Copy requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
+# Paksa update yt-dlp ke versi terbaru
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -U yt-dlp
+
+# Pastikan satu baris dan tidak ada teks [cite]
 COPY . .
 
-# Railway butuh gunicorn agar stabil
-RUN pip install gunicorn
-
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+CMD ["python", "app.py"]

@@ -71,22 +71,17 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/bestaudio/best', # Ambil apa saja yang tersedia
+                'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    'preferredquality': '128', # 128kbps lebih hemat RAM daripada 192kbps
                 }],
-                'extract_audio': True,
-                'ignoreerrors': True,
-                'noplaylist': True,
-                'prefer_ffmpeg': True, # Paksa pakai FFmpeg Linux tadi
-                'outtmpl': f'{session_path}/%(title)s.%(ext)s',
-                'progress_hooks': [lambda d: progress_hook(d, tracker)],
+                'nocheckcertificate': True,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'source_address': '0.0.0.0', # Penting untuk stabilitas IP di Railway/HF
                 'quiet': True,
                 'no_warnings': True,
-                'nocheckcertificate': True,
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             }
 
             if os.path.exists(cookie_path):
@@ -115,7 +110,7 @@ def process_videos():
             
             if tracker.files:
                 create_zip(session_id, tracker.files)
-            
+                time.sleep(3) # Beri napas ke server untuk nulis file ke disk
             tracker.status = "✅ Selesai!"
             tracker.is_complete = True
 
