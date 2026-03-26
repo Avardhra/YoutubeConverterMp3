@@ -72,17 +72,16 @@ def process_videos():
         try:
             ydl_opts = {
                 'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '128',
-                }],
-                # Tambahan untuk mengatasi tantangan JavaScript
-                'noprogress': True,
-                'nocheckcertificate': True,
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'source_address': '0.0.0.0',
-                'quiet': True
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '128',
+    }],
+    'nocheckcertificate': True,
+    # Gunakan User-Agent yang meniru browser asli
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'source_address': '0.0.0.0',
+    'quiet': True
             }
 
             if os.path.exists(cookie_path):

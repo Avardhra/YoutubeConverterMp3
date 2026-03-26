@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# Install FFmpeg DAN Node.js
+# Instal FFmpeg DAN Node.js sebagai runtime JavaScript
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     nodejs \
@@ -11,7 +11,7 @@ WORKDIR /code
 
 COPY requirements.txt .
 
-# Pastikan yt-dlp selalu versi terbaru
+# Paksa update yt-dlp untuk mendapatkan patch bypass terbaru
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -U yt-dlp
 
