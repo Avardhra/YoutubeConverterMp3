@@ -11,29 +11,29 @@ from flask import Flask, request, send_from_directory, jsonify, Response
 from flask_cors import CORS
 import yt_dlp
 
-# Paksa update yt-dlp di awal agar tidak error DNS/API
+# Paksa update yt-dlp agar engine selalu terbaru
 try:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "yt-dlp"])
 except Exception as e:
     print(f"Update error: {e}")
 
 app = Flask(__name__, static_url_path='', static_folder='.', template_folder='.')
-# Izinkan CORS secara menyeluruh
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Konfigurasi Path Absolut untuk Railway
+# Konfigurasi Path untuk Railway
 BASE_DIR = os.getcwd()
 DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+os.chmod(DOWNLOAD_DIR, 0o777)
 
-# LOGIKA OTOMATIS COOKIES DARI RAILWAY VARIABLES
+# LOGIKA COOKIES
 env_cookies = os.environ.get("YT_COOKIES")
 cookie_path = os.path.join(BASE_DIR, 'cookies.txt')
 
 if env_cookies:
     with open(cookie_path, 'w') as f:
         f.write(env_cookies)
-    print(f"✅ Cookies file created successfully at {cookie_path}")
+    print(f"✅ Cookies file created: {cookie_path}")
 else:
     print("⚠️ Warning: YT_COOKIES environment variable is not set!")
 
@@ -71,8 +71,7 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
-                # 'bestaudio/best' adalah kunci: cari audio saja, 
-                # kalau gagal ambil format video+audio mana saja yang ada
+                # KUNCI PERBAIKAN: 'bestaudio/best' agar tidak error format
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -80,12 +79,9 @@ def process_videos():
                     'preferredquality': '192',
                 }],
                 'extract_audio': True,
-                # Parameter sakti agar tidak rewel soal format:
                 'ignoreerrors': True,
-                'prefer_ffmpeg': True,
                 'noplaylist': True,
-                # Paksa ambil format yang pasti ada (fallback)
-                'format_sort': ['res:1080', 'ext:mp4:m4a'], 
+                'prefer_ffmpeg': True,
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
                 'quiet': True,
@@ -106,7 +102,6 @@ def process_videos():
                     tracker.title = f"Lagu {i+1}/{len(urls)}"
                     tracker.status = "Mengunduh..."
                     try:
-                        # Retry logic jika terjadi kendala jaringan
                         for attempt in range(3):
                             try:
                                 ydl.download([url])
@@ -119,9 +114,7 @@ def process_videos():
                         print(f"Error downloading {url}: {e}")
                         tracker.current += 1 
 
-            # Jeda sebentar agar FFmpeg selesai merapikan file
             time.sleep(3)
-
             mp3_files = [f for f in os.listdir(session_path) if f.endswith('.mp3')]
             tracker.files = [{"name": f, "url": f"/get-file/{session_id}/{f}"} for f in mp3_files]
             
@@ -135,7 +128,6 @@ def process_videos():
             tracker.status = f"❌ Error: {str(e)}"
             tracker.is_complete = True
         finally:
-            # Hapus data otomatis setelah 10 menit
             threading.Timer(600.0, cleanup_session, args=[session_id]).start()
 
     thread = threading.Thread(target=download_worker)
@@ -155,65 +147,42 @@ def process_session(session_id):
     while True:
         tracker = active_sessions.get(session_id)
         if not tracker: break
-            
-        progress_data = {
-            'type': 'progress',
-            'current': tracker.current,
-            'total': tracker.total,
-            'title': tracker.title,
-            'status': tracker.status
-        }
+        progress_data = {'type': 'progress', 'current': tracker.current, 'total': tracker.total, 'title': tracker.title, 'status': tracker.status}
         yield f"data: {json.dumps(progress_data)}\n\n"
-        
         if tracker.is_complete:
-            final_data = {
-                'type': 'complete',
-                'files': tracker.files,
-                'zip_url': f'/download-zip/{session_id}',
-                'total': tracker.total
-            }
+            final_data = {'type': 'complete', 'files': tracker.files, 'zip_url': f'/download-zip/{session_id}', 'total': tracker.total}
             yield f"data: {json.dumps(final_data)}\n\n"
             break
-            
         time.sleep(1)
 
 @app.route('/get-file/<session_id>/<path:filename>')
 def get_file(session_id, filename):
-    session_path = os.path.join(DOWNLOAD_DIR, session_id)
-    return send_from_directory(session_path, filename, as_attachment=True)
+    return send_from_directory(os.path.join(DOWNLOAD_DIR, session_id), filename, as_attachment=True)
 
 @app.route('/download-zip/<session_id>')
 def download_zip(session_id):
-    zip_filename = f"{session_id}.zip"
-    zip_path = os.path.join(DOWNLOAD_DIR, zip_filename)
+    zip_path = os.path.join(DOWNLOAD_DIR, f"{session_id}.zip")
     if os.path.exists(zip_path):
-        return send_from_directory(DOWNLOAD_DIR, zip_filename, as_attachment=True)
+        return send_from_directory(DOWNLOAD_DIR, f"{session_id}.zip", as_attachment=True)
     return "File ZIP tidak ditemukan", 404
 
 def create_zip(session_id, files):
     zip_path = os.path.join(DOWNLOAD_DIR, f"{session_id}.zip")
     session_path = os.path.join(DOWNLOAD_DIR, session_id)
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        file_count = 0
         for file_info in files:
             file_path = os.path.join(session_path, file_info['name'])
             if os.path.exists(file_path):
                 zipf.write(file_path, file_info['name'])
-                file_count += 1
-    print(f"✅ ZIP created with {file_count} files.")
 
 def cleanup_session(session_id):
     try:
-        if session_id in active_sessions:
-            del active_sessions[session_id]
+        if session_id in active_sessions: del active_sessions[session_id]
         shutil.rmtree(os.path.join(DOWNLOAD_DIR, session_id), ignore_errors=True)
         zip_file = os.path.join(DOWNLOAD_DIR, f"{session_id}.zip")
-        if os.path.exists(zip_file):
-            os.remove(zip_file)
-    except Exception as e:
-        print(f"Cleanup error: {e}")
+        if os.path.exists(zip_file): os.remove(zip_file)
+    except Exception as e: print(f"Cleanup error: {e}")
 
 if __name__ == '__main__':
-    # Support Port dinamis Railway
     port = int(os.environ.get("PORT", 7860))
     app.run(host='0.0.0.0', port=port)
