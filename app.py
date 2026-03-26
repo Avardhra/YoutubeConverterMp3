@@ -71,13 +71,17 @@ def process_videos():
     def download_worker():
         try:
             ydl_opts = {
+                # Mengambil audio terbaik, jika tidak ada ambil video+audio lalu ekstrak
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
+                # Pengaturan tambahan agar tidak gampang error
                 'extract_audio': True,
+                'ignoreerrors': True,  # Lewati jika ada satu video yang error dalam playlist
+                'prefer_ffmpeg': True,
                 'outtmpl': f'{session_path}/%(title)s.%(ext)s',
                 'progress_hooks': [lambda d: progress_hook(d, tracker)],
                 'quiet': True,
